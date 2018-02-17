@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="shortcut icon" href="">
+
+<head>
+    <meta charset="UTF-8">
+    <title>js-sdk-test</title>
+    <script src="javascripts/jquery.min.js"></script>
+    <script src="javascripts/jquery.cookie.min.js"></script>
+    <script src="javascripts/gizwits_js_0.1.0.js"></script>
+    <script type="text/javascript">
+    var gGizwitsJS;
+    var gSubDevices = {};
+    var gBoundDevices = {};
+    // $(document).ready(setDefault);
+
+    function setDefault() {
+        $('#apiHost').val($.cookie('apiHost'));
+        $('#gizwitsAppID').val($.cookie('gizwitsAppID'));
+        $('#gizwitsOpenID').val($.cookie('gizwitsOpenID'));
+    }
+
+    function newObj() {
+        if (gGizwitsJS != null) {
+            alert("对象已被初始化，如需改变参数，请刷新页面.");
+            return;
+        }
+        var apiHost = $('#apiHost').val();
+        var gizwitsAppID = $('#gizwitsAppID').val();
+        var gizwitsOpenID = $('#gizwitsOpenID').val();
+        gGizwitsJS = new GizwitsJS({
+            apiHost: apiHost,
+            gizwitsOpenId: gizwitsOpenID,
+            gizwitsAppId: gizwitsAppID
+        });
+
+        gGizwitsJS.onBindDevice = onBindDevice;
+        gGizwitsJS.onEventNotify = onEventNotify;
+        gGizwitsJS.onReceiveData = onReceiveData;
+        gGizwitsJS.onDiscoverDevices = onDiscoverDevices;
+        gGizwitsJS.onSubscribeDevice = onSubscribeDevice;
+        gGizwitsJS.onUpdateSubDevices = onUpdateSubDevices;
+        gGizwitsJS.onDeviceOnlineStatusChanged = onDeviceOnlineStatusChanged;
+        gGizwitsJS.onGetGroupList = onGetGroupList;
+        gGizwitsJS.onUpdateGroupList = onUpdateGroupList;
+        gGizwitsJS.onEditGroupName = onEditGroupName;
+        gGizwitsJS.onUpdateGroupDeviceList = onUpdateGroupDeviceList;
+        gGizwitsJS.onGroupWrite = onGroupWrite;
+        gGizwitsJS.onGetSceneList = onGetSceneList;
+        gGizwitsJS.onUpdateSceneList = onUpdateSceneList;
+        gGizwitsJS.onUpdateSceneStatus = onUpdateSceneStatus;
+
+        $.cookie('apiHost', apiHost);
+        $.cookie('gizwitsAppID', gizwitsAppID);
+        $.cookie('gizwitsOpenID', gizwitsOpenID);
+        showScreen("初始化对象成功!");
+    }
+
+    function discoverDevices() {
+        gGizwitsJS.discoverDevices();
+        showScreen("已发送discoverDevices指令!");
+    }
+
+    function subscribeDevice() {
+        var did = $('#subscribeDeviceDid').val();
+        gGizwitsJS.subscribeDevice({
+            did: did
+        });
+        showScreen("已发送subscribeDevice指令!");
+    }
+
+    function read() {
+        var did = $('#readDid').val();
+        var attrs = $('#attrsForRead').val();
+        if (attrs) {
+            gGizwitsJS.read({
+                did: did,
+                attrs: JSON.parse(attrs)
+            });
+        } else {
+            gGizwitsJS.read({
+                did: did
+            });
+        };
+        showScreen("已发送read指令!");
+    }
+
+    function writeCommand() {
+        var rawObj;
+        var attrsObj;
+        var raw = $('#raw').val();
+        var attrs = $('#attrsForWrite').val();
+        var did = $('#writeDid').val();
+        try {
+            if (raw) {
+                rawObj = JSON.parse(raw);
+            }
+            if (attrs) {
+                attrsObj = JSON.parse(attrs);
+            }
+            gGizwitsJS.write({
+                did: did,
+                attrs: attrsObj,
+                raw: rawObj
+            });
+            showScreen("已对设备" + did + "发送write指令: attrs=" + attrs + ",raw=" + raw);
+        } catch (e) {
+            showError("数据格式错误：" + e);
+        }
+    }
+
+    function updateSubDevices() {
+        var did = $('#updateSubdevicesDid').val();
+        gGizwitsJS.updateSubDevices({
+            did: did
+        });
+        showScreen("已对中控设备" + did + "发送更新子设备列表指令!");
+    }
+
+    function addSubDevice() {
+        var did = $('#addSubDeviceDid').val();
+        var subDevices = $('#subDevicesForAdding').val();
+        if (subDevices) {
+            gGizwitsJS.addSubDevice({
+                did: did,
+                subDevices: JSON.parse(subDevices)
+            });
+        } else {
+            gGizwitsJS.addSubDevice({
+                did: did
+            });
+        }
+        showScreen("已对中控设备" + did + "发送添加子设备指令: subDevices=" + subDevices);
+    }
+
+    function removeSubDevice() {
+        var did = $('#removeSubDeviceDid').val();
+        var subDevices = $('#subDevicesForDeleting').val();
+        if (subDevices) {
+            gGizwitsJS.removeSubDevice({
+                did: did,
+                subDevices: JSON.parse(subDevices)
+            });
+        } else {
+            gGizwitsJS.removeSubDevice({
+                did: did
+            });
+        }
+        showScreen("已对中控设备" + did + "发送删除子设备指令: subDevices=" + subDevices);
+    }
+
+    function bindDevice() {
+        var bindInfo = $('#bindInfo').val();
+        var device = $('#deviceForBinding').val();
+        if (device && bindInfo) {
+            gGizwitsJS.bindDevice({
+                device: JSON.parse(device),
+                bindInfo: JSON.parse(bindInfo)
+            });
+        } else if (device) {
+            gGizwitsJS.bindDevice({
+                device: JSON.parse(device)
+            });
+        } else if (bindInfo) {
+            gGizwitsJS.bindDevice({
+                bindInfo: JSON.parse(bindInfo)
+            });
+        } else {
+            gGizwitsJS.bindDevice({});
+        }
+        showScreen("已发送绑定(子)设备指令: bindInfo=" + bindInfo + ", device=" + device);
+    }
+
+    function setDeviceInfo() {
+        var params = $('#deviceForSetting').val();
+        if (params) {
+            gGizwitsJS.setDeviceInfo(JSON.parse(params));
+        } else {
+            gGizwitsJS.setDeviceInfo({});
+        }
+        showScreen("已发送修改设备信息指令: params=" + params);
+    }
+
+    function getGroupCache() {
+        gGizwitsJS.getGroupList();
+        showScreen("已发送获取分组缓存指令");
+    }
+
+    function addGroup() {
+        var params = $('#addGroupParam').val();
+        if (params) {
+            gGizwitsJS.addGroup(JSON.parse(params));
+        } else {
+            gGizwitsJS.addGroup({});
+        }
+        showScreen("已发送添加分组指令: params=" + params);
+    }
+
+    function deleteGroup() {
+        var params = $('#deleteGroupParam').val();
+        if (params) {
+            gGizwitsJS.deleteGroup(JSON.parse(params));
+        } else {
+            gGizwitsJS.deleteGroup({});
+        }
+        showScreen("已发送删除分组指令: params=" + params);
+    }
+
+    function updateGroup() {
+        gGizwitsJS.updateGroupList();
+        showScreen("已发送获取分组列表指令");
+    }
+
+    function editGroup() {
+        var params = $('#editGroupParam').val();
+        if (params) {
+            gGizwitsJS.editGroupName(JSON.parse(params));
+        } else {
+            gGizwitsJS.editGroupName({});
+        }
+        showScreen("已发送编辑分组名指令: params=" + params);
+    }
+    
+    function addGroupDevices() {
+        var params = $('#addGroupDeviceParam').val();
+        if (params) {
+            gGizwitsJS.editGroupDevices(JSON.parse(params));
+        } else {
+            gGizwitsJS.editGroupDevices({});
+        }
+        showScreen("已发送添加分组设备指令: params=" + params);
+    }
+
+    function deleteGroupDevices() {
+        var params = $('#deleteGroupDeviceParam').val();
+        if (params) {
+            gGizwitsJS.deleteGroupDevices(JSON.parse(params));
+        } else {
+            gGizwitsJS.deleteGroupDevices({});
+        }
+        showScreen("已发送删除分组设备指令: params=" + params);
+    }
+
+    function updateGroupDevices() {
+        var params = $('#updateGroupDeviceParam').val();
+        if (params) {
+            gGizwitsJS.updateGroupDevices(JSON.parse(params));
+        } else {
+            gGizwitsJS.updateGroupDevices({});
+        }
+        showScreen("已发送获取分组设备指令");
+    }
+
+    function writeGroup() {
+        var params = $('#writeGroupParam').val();
+        if (params) {
+            gGizwitsJS.groupWrite(JSON.parse(params));
+        } else {
+            gGizwitsJS.groupWrite({});
+        }
+        showScreen("已发送控制分组指令: params=" + params);
+    }
+    
+    function getSceneCache() {
+        gGizwitsJS.getScenenList();
+        showScreen("已发送场景缓存指令");
+    }
+
+    function addScene() {
+        var params = $('#addSceneParam').val();
+        if (params) {
+            gGizwitsJS.addScene(JSON.parse(params));
+        } else {
+            gGizwitsJS.addScene({});
+        }
+        showScreen("已发送添加场景指令: params=" + params);
+    }
+
+    function deleteScene() {
+        var params = $('#deleteSceneParam').val();
+        if (params) {
+            gGizwitsJS.deleteScene(JSON.parse(params));
+        } else {
+            gGizwitsJS.deleteScene({});
+        }
+        showScreen("已发送删除场景指令: params=" + params);
+    }
+    
+    function updateScene() {
+        gGizwitsJS.updateScenes();
+        showScreen("已发送获取场景列表指令");
+    }
+    
+    function updateSceneStatus() {
+        var params = $('#updateSceneStatusParam').val();
+        if (params) {
+            gGizwitsJS.updateSceneStatus(JSON.parse(params));
+        } else {
+            gGizwitsJS.updateSceneStatus({});
+        }
+        showScreen("已发送场景状态查询指令: params=" + params);
+    }
+    
+    function executeScene() {
+        var params = $('#executeSceneParam').val();
+        if (params) {
+            gGizwitsJS.executeScene(JSON.parse(params));
+        } else {
+            gGizwitsJS.executeScene({});
+        }
+        showScreen("已发送场景执行指令: params=" + params);
+    }
+
+    function clearLog() {
+        $('#log').html("");
+    }
+
+    //=========================================================
+    // callback functions
+    //=========================================================
+    function onDiscoverDevices(ret, err) {
+        if (ret) {
+            var deviceArray = ret.devices;
+            if (deviceArray.length) {
+                for (var i = deviceArray.length - 1; i >= 0; i--) {
+                    var device = deviceArray[i];
+                    showScreen("==================================================");
+                    showScreen("更新设备列表:product_key=" + device.product_key);
+                    showScreen("更新设备列表:did=" + device.did);
+                    showScreen("更新设备列表:mac=" + device.mac);
+                    showScreen("更新设备列表:is_subscribe=" + device.is_subscribe);
+                    showScreen("更新设备列表:is_online=" + device.is_online);
+                    showScreen("更新设备列表:is_bind=" + device.is_bind);
+                    showScreen("更新设备列表:type=" + device.type);
+                    showScreen("更新设备列表:alias=" + device.alias);
+                    showScreen("更新设备列表:remark=" + device.remark);
+
+                    addSelectOption('#subscribeDeviceDid', device.did, device.did);
+
+                    gBoundDevices[device.did] = device;
+                }
+            } else {
+                showScreen("没有绑定的设备");
+            }
+        } else {
+            showErr(arguments.callee.name, err);
+        }
+    }
+
+    function onUpdateSubDevices(ret, err) {
+        if (ret) {
+            var did = ret.did;
+            var subDevices = ret.subDevices;
+            gSubDevices[did] = {}; //清空子设备列表缓存
+            if (subDevices.length) {
+                for (var i = subDevices.length - 1; i >= 0; i--) {
+                    var subDevice = subDevices[i];
+                    showScreen("==================================================");
+                    showScreen("更新子设备:所属中控did=" + did);
+                    showScreen("更新子设备:product_key=" + subDevice.product_key);
+                    showScreen("更新子设备:did=" + subDevice.did);
+                    showScreen("更新子设备:mac=" + subDevice.mac);
+                    showScreen("更新子设备:is_online=" + subDevice.is_online);
+
+                    addSelectOption('#subDid', subDevice.did, subDevice.did);
+
+                    gSubDevices[did][subDevice.did] = subDevice;
+                }
+            } else {
+                showScreen("中控 " + did + " 没有子设备");
+            }
+        } else {
+            showErr(arguments.callee.name, err);
+        }
+    }
+
+    function onSubscribeDevice(ret, err) {
+        if (ret) {
+            var did = ret.did;
+            addSelectOption('#readDid', did, did);
+            addSelectOption('#writeDid', did, did);
+            var device = gBoundDevices[did];
+            if (device) {
+                addSelectOption('#addSubDeviceDid', did, did);
+                addSelectOption('#removeSubDeviceDid', did, did);
+                addSelectOption('#updateSubdevicesDid', did, did);
+            }
+
+            showScreen("订阅设备:" + did + "成功!");
+        } else {
+            showErr(arguments.callee.name, err);
+        }
+    }
+
+    function onDeviceOnlineStatusChanged(ret, err) {
+        if (ret) {
+            showScreen("设备上下线通知，did=" + ret.did);
+            showScreen("设备上下线通知，is_online=" + ret.is_online);
+        } else {
+            showErr(arguments.callee.name, err);
+        }
+    }
+
+    function onReceiveData(ret, err) {
+        if (ret) {
+            if (ret.attrs) {
+                var str = "收到设备 " + ret.did + " 的Attrs: ";
+                for (var key in ret.attrs) {
+                    str = str + key + ":" + ret.attrs[key] + ",";
+                }
+                str = str.substr(0, str.length - 1);
+                showScreen(str);
+            } else if (ret.raw) {
+                var str = "收到设备 " + ret.did + " 的Raw: [";
+                for (var i = 0; i < ret.raw.length; i++) {
+                    str = str + ret.raw[i] + ",";
+                }
+                str = str.substr(0, str.length - 1) + "]";
+                showScreen(str);
+            }
+        } else {
+        	showErr(arguments.callee.name, err);
+        }
+    }
+
+    function onBindDevice(ret, err) {
+    	if (ret) {
+    		showScreen("绑定设备:" + ret.did + "成功!");
+    	} else {
+    		showErr(arguments.callee.name, err);
+    	}
+    }
+
+    function onEventNotify(ret) {
+        showError("onEventNotify:" + JSON.stringify(ret));
+    }
+
+    function onGetGroupList(ret) {
+        showScreen("分组缓存：" + JSON.stringify(ret));
+    }
+
+    function onUpdateGroupList(ret, err) {
+        if (ret) {
+            showScreen("更新分组：" + JSON.stringify(ret));
+        } else {
+            showError("更新操作失败：" + JSON.stringify(err));
+        }
+    }
+
+    function onEditGroupName(ret, err) {
+        if (ret) {
+            showScreen("编辑分组名成功：" + JSON.stringify(ret));
+        } else {
+            showError("编辑分组名失败：" + JSON.stringify(err));
+        }
+    }
+
+    function onUpdateGroupDeviceList(ret, err) {
+        if (ret) {
+            showScreen("更新分组设备列表成功：" + JSON.stringify(ret));
+        } else {
+            showError("更新分组设备列表失败：" + JSON.stringify(err));
+        }
+    }
+
+    function onGroupWrite(ret, err) {
+        if (ret) {
+            showScreen("控制分组成功：" + JSON.stringify(ret));
+        } else {
+            showError("控制分组失败：" + JSON.stringify(err));
+        }
+    }
+    
+    function onGetSceneList(ret, err) {
+        showScreen("场景缓存：" + JSON.stringify(ret));
+    }
+    
+    function onUpdateSceneList(ret, err) {
+        if (ret) {
+            showScreen("更新场景列表成功：" + JSON.stringify(ret));
+        } else {
+            showError("更新场景列表失败：" + JSON.stringify(err));
+        }
+    }
+
+    function onUpdateSceneStatus(ret, err) {
+        if (ret) {
+            showScreen("更新场景状态成功：" + JSON.stringify(ret));
+        } else {
+            showError("更新场景状态失败：" + JSON.stringify(err));
+        }
+    }
+
+    //=========================================================
+    // inner functions
+    //=========================================================
+    function showScreen(txt) {
+        $('#log').prepend('<p style="color: blue">' + txt + '</p>');
+    }
+
+    function showErr(func, err) {
+        if (err.did) {
+            showError(func + ":error_code=" + err.error_code + ", error_message=" + err.error_message + ", did=" + err.did);
+        } else {
+            showError(func + ":error_code=" + err.error_code + ", error_message=" + err.error_message);
+        }
+    }
+
+    function showError(txt) {
+        $('#log').prepend('<p style="color: red">' + txt + '</p>');
+    }
+
+    function addSelectOption(selectId, value, text) {
+        if ($(selectId + ' option[value =' + value + ']').length == 0) {
+            $(selectId).append("<option value=" + value + ">" + text + "</option>");
+        }
+    }
+    </script>
+</head>
+
+<body>
+    <h3>Gizwits-Javascript-SDK Example v0.1.0</h3>
+    <p>（请使用Chrome、Firefox等支持Websocket功能的浏览器，低版本IE或Firefox存在不兼容的情况）</p>
+    <a href="https://taotown.github.io/GizwitsJS/" target="view_frame">早期的发布版本</a>
+    <hr/>
+    <table border="0" cellpadding="0" , cellspacing="0">
+        <tr>
+            <td align="left" valign="top" style="border-right: #d0d0d0 1px solid; padding: 0 10px 0 0;">
+                <h4>1. 首先，请初始化GizwitsJS对象</h4>
+                <table border="0" cellpadding="0" , cellspacing="2">
+                    <tr>
+                        <td align="left" valign="top">
+                            <label>APIHost:</label>
+                        </td>
+                        <td align="left" valign="top">
+                            <input type="text" id="apiHost" value="api.gizwits.com" size="30" placeholder="input like: api.gizwits.com" />
+                        </td>
+                        <td align="left" valign="top">
+                            <label style="font-size: small">机智云OpenAPI域名</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="left" valign="top">
+                            <label>GizwitsOpenID:</label>
+                        </td>
+                        <td align="left" valign="top">
+                            <input type="text" id="gizwitsOpenID" value="A037E0FC-AB7F-4D82-B6B1-DAB5575AA188" size="30" placeholder="wx001" />
+                        </td>
+                        <td align="left" valign="top">
+                            <label style="font-size: small">机智云OpenID</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="left" valign="top">
+                            <label>GizwitsAppID:</label>
+                        </td>
+                        <td align="left" valign="top">
+                            <input type="text" id="gizwitsAppID" value="c15db46429794d6ca2ef0c4be5e102e9" size="30" placeholder="60d9d45a420b4f539434adb127fe5e5e" />
+                        </td>
+                        <td align="left" valign="top">
+                            <label style="font-size: small">机智云平台应用标识</label>
+                        </td>
+                    </tr>
+                </table>
+                <br/>
+                <button id="newObj" onclick="newObj()">Do it!</button>
+                <br/>
+                <p>（初始化对象的过程中，已经自动完成了callback函数的创建。）</p>
+                <h4>2. 然后，使用GizwitsJS.discoverDevices()刷新设备列表</h4>
+                <button id="discoverDevices" onclick="discoverDevices()">Do it!</button>
+                <br/>
+                <p>（刷新结果会在onDiscoverDevices这个callback函数返回。）</p>
+                <h4>3. 接着，订阅一个设备</h4>
+                <label style="display:inline-block;width: 90px">did:</label>
+                <select id="subscribeDeviceDid" about="" style="width: 300px;"></select>
+                <button id="subscribeDevice" onclick="subscribeDevice()">Do it!</button>
+                <br/>
+                <p>（订阅结果会在onSubscribeDevice这个callback函数返回。）</p>
+                <h4>4. 选择已订阅设备,读取状态</h4>
+                <label style="display:inline-block;width: 90px">did:</label>
+                <select id="readDid" about="" style="width: 300px;"></select>
+                <br/>
+                <label>attrs:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="attrsForRead" placeholder='对于定义了变长数据点的设备可以指定关心的数据点名称读取相应的数据点状态，例如["A01","A02", ...]，不填写内容则表示读取所有数据点；对于定义了定长数据点的设备只支持不指定数据点名称来读取所有数据点'></textarea>
+                <br/>
+                <button id="read" onclick="read()">Do it!</button>
+                <br/>
+                <p>（读取结果在onReceiveData这个callback函数返回。）</p>
+                <h4>5. 选择已订阅设备，控制一下</h4>
+                <label style="display:inline-block;width: 90px">did:</label>
+                <select id="writeDid" about="" style="width: 300px;"></select>
+                <br/>
+                <label>attrs:</label>
+                <br/>
+                <textarea rows="10" cols="90" id="attrsForWrite" placeholder='以数据点方式控制设备，请输入数据点键值对，例如{"power":true,"speed":0,...}，如果设备支持，可以与自定义方式同时使用'></textarea>
+                <br/>
+                <label>raw:</label>
+                <br/>
+                <textarea rows="10" cols="90" id="raw" placeholder='以自定义方式控制设备，请输入P0数组，例如[<byte>,<byte>,<byte>...]，如果设备支持，可以与数据点方式同时使用'></textarea>
+                <br/>
+                <button id="writeCommand" onclick="writeCommand()">Do it!</button>
+                <br/>
+                <p>（控制结果在onReceiveData这个callback函数返回。）</p>
+                <h4>6. 选择已订阅中控设备，更新一下子设备列表</h4>
+                <label style="display:inline-block;width: 90px">did:</label>
+                <select id="updateSubdevicesDid" about="" style="width: 300px;"></select>
+                <button id="updateSubDevices" onclick="updateSubDevices()">Do it!</button>
+                <br/>
+                <p>（更新结果在onUpdateSubDevices这个callback函数返回。）</p>
+                <h4>7. 选择已连接中控设备，添加一下子设备</h4>
+                <label style="display:inline-block;width: 90px">did:</label>
+                <select id="addSubDeviceDid" about="" style="width: 300px;"></select>
+                <br/>
+                <label>subDevices:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="subDevicesForAdding" placeholder='填写子设备信息subDevices,例如[{"mac":"xxx"},{"mac":"yyy"},...],则指定待筛选的子设备信息,不填写则不筛选'></textarea>
+                <br/>
+                <button id="addSubDevice" onclick="addSubDevice()">Do it!</button>
+                <br/>
+                <p>（添加结果会在onUpdateSubDevices这个callback函数返回。）</p>
+                <h4>8. 选择已订阅中控设备及其子设备，删除一下子设备</h4>
+                <label style="display:inline-block;width: 90px">did:</label>
+                <select id="removeSubDeviceDid" about="" style="width: 300px;"></select>
+                <br/>
+                <label>subDevices:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="subDevicesForDeleting" placeholder='填写子设备信息subDevices,例如[{"did":"xxx"},{"did":"yyy"},...],指定待删除的子设备'></textarea>
+                <br/>
+                <button id="removeSubDevice" onclick="removeSubDevice()">Do it!</button>
+                <br/>
+                <p>（删除结果会在onUpdateSubDevices这个callback函数返回。）</p>
+                <h4>9. 选择一个已存在的(子)设备，绑定一下(子)设备</h4>
+                <label>device:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="deviceForBinding" placeholder='填写待绑定的(子)设备信息device,例如{"mac":"xxx","productKey":"yyy"}'></textarea>
+                <br/>
+                <label>bindInfo:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="bindInfo" placeholder='填写绑定信息bindInfo,例如 {"product_secret": "xxx","device_bind_url": "yyy"},product_secret跟device_bind_url,填且仅填一个'></textarea>
+                <br/>
+                <button id="bindDevice" onclick="bindDevice()">Do it!</button>
+                <br/>
+                <p>（若绑定(子)设备成功，会在onBindDevice这个callback函数返回。）</p>
+                <h4>10. 选择一个已绑定设备，修改一下设备信息</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="deviceForSetting" placeholder='填写待修改的已绑定设备信息params,例如{"did":"xxx","alias":"yyy","remark":"zzz"}'></textarea>
+                <br/>
+                <button id="deviceSetting" onclick="setDeviceInfo()">Do it!</button>
+                <br/>
+                <p>（修改结果，会在onSetDeviceInfo这个callback函数返回。）</p>
+                <h4>11. 获取分组缓存列表</h4>
+                <br/>
+                <button id="getGroupCache" onclick="getGroupCache()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onGetGroupList这个callback函数返回。）</p>
+                <h4>12. 添加分组</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="addGroupParam" placeholder='填写待添加的分组信息params,例如{"name":"xxx","product_key":"yyy"}'></textarea>
+                <br/>
+                <button id="addGroup" onclick="addGroup()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateGroupList这个callback函数返回。）</p>
+                <h4>13. 删除分组</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="deleteGroupParam" placeholder='填写待删除的分组信息params,例如{"group_id":"xxx"}'></textarea>
+                <br/>
+                <button id="deleteGroup" onclick="deleteGroup()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateGroupList这个callback函数返回。）</p>
+                <h4>14. 获取分组列表</h4>
+                <br/>
+                <button id="updateGroup" onclick="updateGroup()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateGroupList这个callback函数返回。）</p>
+                <h4>15. 编辑分组名</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="editGroupParam" placeholder='填写待编辑的分组信息params,例如{"group_id":"xxx", "group_name":"yyy"}'></textarea>
+                <br/>
+                <button id="groupName" onclick="editGroup()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onEditGroupName这个callback函数返回。）</p>
+                <h4>16. 添加分组设备列表</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="addGroupDeviceParam" placeholder='填写待添加的分组设备params,例如{"group_id":"xxx", "devices":[{"did": yyy}]}'></textarea>
+                <br/>
+                <button id="addGroupDevices" onclick="addGroupDevices()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateGroupDeviceList这个callback函数返回。）</p>
+                <h4>17. 删除分组设备列表</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="deleteGroupDeviceParam" placeholder='填写待删除的分组设备params,例如{"group_id":"xxx", "devices":[{"did": yyy}]}'></textarea>
+                <br/>
+                <button id="deleteGroupDevices" onclick="deleteGroupDevices()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateGroupDeviceList这个callback函数返回。）</p>
+                <h4>18. 更新分组设备列表</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="updateGroupDeviceParam" placeholder='填写待获取的分组设备params,例如{"group_id":"xxx"}'></textarea>
+                <br/>
+                <button id="updateGroupDevices" onclick="updateGroupDevices()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateGroupDeviceList这个callback函数返回。）</p>
+                <h4>19. 控制分组</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="writeGroupParam" placeholder='填写待控制的分组params,例如{"group_id":"xxx", "attrs":{"yyy": zzz}, "raw":"aaa"}'></textarea>
+                <br/>
+                <button id="writeGroup" onclick="writeGroup()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onGroupWrite这个callback函数返回。）</p>
+                <h4>20. 场景缓存</h4>
+                <br/>
+                <button id="getSceneCache" onclick="getSceneCache()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onGetSceneList这个callback函数返回。）</p>
+                <h4>21. 添加场景</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="addSceneParam" placeholder='填写待添加场景的params,例如{"name":"xxx", "remark":"yyy", "tasks":{"task_type": "delay/device/group", "time": 0, "did": "aaa", "group_id": "bbb", "attrs": {}, "raw": "ccc"}}'></textarea>
+                <br/>
+                <button id="addScene" onclick="addScene()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateSceneList这个callback函数返回。）</p>
+                <h4>22. 删除场景</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="deleteSceneParam" placeholder='填写待删除场景的params,例如{"scene_id":"xxx"}'></textarea>
+                <br/>
+                <button id="deleteScene" onclick="deleteScene()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateSceneList这个callback函数返回。）</p>
+                <h4>23. 更新场景</h4>
+                <br/>
+                <button id="updateScene" onclick="updateScene()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateSceneList这个callback函数返回。）</p>
+                <h4>24. 查询场景状态</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="updateSceneStatusParam" placeholder='填写待查询场景的params,例如{"scene_id":"xxx"}'></textarea>
+                <br/>
+                <button id="updateSceneStatus" onclick="updateSceneStatus()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateSceneStatus这个callback函数返回。）</p>
+                <h4>25. 执行场景</h4>
+                <label>params:</label>
+                <br/>
+                <textarea rows="5" cols="90" id="executeSceneParam" placeholder='填写待执行场景的params,例如{"scene_id":"xxx"}'></textarea>
+                <br/>
+                <button id="executeScene" onclick="executeScene()">Do it!</button>
+                <br/>
+                <p>（执行结果，会在onUpdateSceneStatus这个callback函数返回。）</p>
+            </td>
+            <td align="left" valign="top" style="padding: 0 0 0 10px;">
+                <button id="clear" onclick="clearLog();">clear</button>
+                <br/>
+                <span id="log"></span>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>
