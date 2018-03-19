@@ -98,7 +98,7 @@ for 的用法：<br>
 <font size='11' color='#ff0000'>font size=11, color #ff0000</font><br>
 
 Objective C 代码片段：<br>
-{% highlight objective-c %}
+{% highlight objective_c %}
 [XPGWifiSDK sharedInstance];
 - (int)xpgWifiSDK:(XPGWifiSDK *)sdk {
     return 0;

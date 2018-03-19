@@ -12,7 +12,7 @@ share: false
 <h1>iOS文本编辑控件</h1>
 iOS文本编辑控件，主要有两种：UITextView和UITextField。为UITextView添加灰色提示文字（Placeholder），做输入检测的时候，在iOS9.3出现的一种情况：
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 - (BOOL)textView:(UITextView *)textView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text {
 	...
 }
@@ -22,7 +22,7 @@ iOS文本编辑控件，主要有两种：UITextView和UITextField。为UITextVi
 
 <img src="/images/2017/08/textview-bug.png" />
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 - (void)textViewDidChange:(UITextView *)textView {
 	...
 }

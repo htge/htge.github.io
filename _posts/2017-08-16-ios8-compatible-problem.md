@@ -28,7 +28,7 @@ share: false
 
 使用左滑功能时，正常情况下只要使用editActionsForRowAtIndexPath监听，就可以完成想要的功能
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 - (NSArray<UITableViewRowAction *> *)tableView:(UITableView *)tableView editActionsForRowAtIndexPath:(NSIndexPath *)indexPath {
 	...
 }
@@ -36,7 +36,7 @@ share: false
 
 为了兼容iOS8，必须增加以下空实现：
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
     
 }
@@ -50,7 +50,7 @@ share: false
 
 于是要加以下兼容代码：
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 if (!self.tableView.isDragging && !self.tableView.decelerating && self.tableView.contentOffset.y != -64) { //修复iOS8的显示问题
     self.tableView.contentInset = UIEdgeInsetsMake(64, 0, 0, 0);
 }
@@ -62,7 +62,7 @@ if (!self.tableView.isDragging && !self.tableView.decelerating && self.tableView
 
 使用检测当前语言的api检测中文，以下写法不通用：
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 NSString *language = [NSLocale preferredLanguages].firstObject;
 if ([language isEqualToString:@"zh-Hans-CN"]) {
     ...
@@ -71,7 +71,7 @@ if ([language isEqualToString:@"zh-Hans-CN"]) {
 
 因为在某些环境下会是zh-Hans-US，不一定是zh-Hans-CN。以上代码，不仅是iOS8不兼容，其他系统也可能不兼容。为了兼容所有情况，可以使用以下代码检测：
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 NSString *language = [NSLocale preferredLanguages].firstObject;
 if ([language hasPrefix:@"zh-Hans"]) {
     ...

@@ -15,7 +15,7 @@ share: false
 
 不管是iOS还是安卓，还是基于其他语言的SDK。面向对象，都会有一些很相似的用法。比如iOS嗲用一些接口，注册delegate，安卓调用接口，注册listener。或者注册观察者、block、直接使用接口的返回值等等方式，拿到接口调用执行后的错误码、接口需要关心的内容。每种方式各有各的特点，<b>不合理的设计回调接口，开发着使用起来会变得复杂和不方便</b>。对于异步调用的接口来讲，常见的问题是来自于Delegate和Listener。
 
-{% highlight objective-c %}
+{% highlight objective_c %}
 @protocol SampleClassDelegate <NSObject>
 @optional
 
