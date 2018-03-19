@@ -13,39 +13,27 @@ share: false
 
 <h3>前言</h3>
 
-今天谈谈界面的设计模式。网上有很多这样的文章，但是很多文章都讲不清楚所以然，抽象到理解都觉得困难。花了不少心思在理解这些模式，结合代码，就容易理解了。
+今天谈谈界面的设计模式。了解设计模式，看几篇博客都不是那么轻易能下定论的，得一步步变为实践才行
 
 <h3>MVC</h3>
 
 Model-View-Controller
 
-默认根据Xcode模版创建继承UIViewController以后的结果，就是MVC设计模式。
+用户操作的视图关联到控制器Controller里面，视图调用的事件传递给控制器
+Controller负责处理业务逻辑，操作Model层
+View会依赖Model的数据，目前都不用这种模式，用起来太繁琐
 
-UIViewController的接口，包含了view属性。继承UIViewController类的对象，自带了view属性，可以这样操作一个视图：
+<h3>MVP</h3>
 
-{% highlight objective-c %}
-@interface ViewController : UIViewController
-@end
+Controller当成Presenter。View可选依赖Model的数据，一般是不会用View与Model做数据关联的。由Presenter协调View与Model之间的关系。对于简单的界面来讲，逻辑清晰，是目前广泛采用的模式。复杂的界面，Presenter就显得过于庞大了，可维护性降低
 
-@implementation ViewController
-
-- (void)viewDidLoad {
-    UIView *newView = [[UIView alloc] init];
-    [self.view addSubView:newView];
-}
-
-@end
-{% endhighlight %}
-
-因为视图View包含在控制器Controller里面，模式一目了然。但是Model是什么呢？有人说是持久化。按照上面的代码，做一个界面，为了能够在手机屏幕上能简单实现显示内容和交互的效果，最基本界面不含持久化，还有一个模式叫MVCS。只是通过UIViewController创建，里面还要通过模型实现很多的业务逻辑。
+![](/images/2018/03/MVP.png "MVP")
 
 <h3>MVVM</h3>
 
 Model-View-ViewModel
 
-控制器没了？其实这种模式控制器依然存在。基于MVC的基础上，利用Reactive Cocoa把子视图和数据双向绑定，业务逻辑都放在viewModel上实现。
-
-这样就多了一个类，viewModel类
+在MVP的基础上，视图和模型，做了数据双向绑定(binder)，业务逻辑都放在viewModel上实现。由于数据绑定的关系，viewModel可以不直接操作view，直接向Model拿数据就可以更新视图的内容。视图状态多了，需要绑定的值也就特别多。复杂的数据绑定关系，变得难以调试和维护
 
 <h3>VIPER</h3>
 
