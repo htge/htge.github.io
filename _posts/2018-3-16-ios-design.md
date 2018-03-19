@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "对MVVM、VIPER的初步理解"
+title:      "对MVVM、VIPER的简单理解"
 subtitle:   "什么样的需求使用哪种模式"
 date:       2018-3-15 4:00:00
 author:     "Tom"
@@ -9,7 +9,7 @@ category: [ios]
 comments: true
 share: false
 ---
-<h1>对MVVM、VIPER的初步理解</h1>
+<h1>对MVVM、VIPER的简单理解</h1>
 
 <h3>前言</h3>
 
